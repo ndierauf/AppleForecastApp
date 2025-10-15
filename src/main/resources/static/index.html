@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forecast Viewer</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 2rem;
+            display: flex;
+            gap: 2rem;
+        }
+
+        .form-container {
+            flex: 0 0 300px;
+        }
+
+        .forecast-container {
+            flex: 1;
+            padding: 1rem;
+            border-left: 2px solid #ccc;
+            position: relative;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .forecast-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 1rem;
+            width: 250px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background: #fafafa;
+        }
+
+        .card img {
+            width: 64px;
+            height: 64px;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .card h3 {
+            margin: 0.3rem 0;
+        }
+
+        .card p {
+            margin: 0.3rem 0;
+            font-size: 0.9rem;
+        }
+
+        .cache-note {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: #555;
+            font-style: italic;
+        }
+
+        .cache-indicator {
+            position: absolute;
+            top: 0;
+            right: 10px;
+            font-size: 2rem;
+            color: #999;
+        }
+
+        .update-time {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: -0.5rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+<div class="form-container">
+    <h2>Get Forecast</h2>
+    <form id="forecastForm">
+        <label for="address">Address:</label>
+        <input type="text" id="address" name="address" placeholder="Enter address..." required>
+        <button type="submit">Submit</button>
+    </form>
+</div>
+
+<div class="forecast-container">
+    <h2>Forecast</h2>
+    <div id="updateTime" class="update-time"></div>
+    <div id="locationName" class="update-time"></div>
+    <div id="cacheIndicator" class="cache-indicator" title="Forecast retrieved from cache">*</div>
+    <div id="forecast">No data yet.</div>
+    <div id="cacheNote" class="cache-note"></div>
+</div>
+
+<script>
+    const form = document.getElementById('forecastForm');
+    const forecastDiv = document.getElementById('forecast');
+    const updateTimeDiv = document.getElementById('updateTime');
+    const locationNameDiv = document.getElementById('locationName');
+    const cacheIndicator = document.getElementById('cacheIndicator');
+    const cacheNote = document.getElementById('cacheNote');
+
+    // Hide cache indicator by default
+    cacheIndicator.style.display = "none";
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const address = document.getElementById('address').value.trim();
+        if (!address) return;
+
+        forecastDiv.textContent = "Loading...";
+        updateTimeDiv.textContent = "";
+        locationNameDiv.textContent = "";
+        cacheIndicator.style.display = "none";
+        cacheNote.textContent = "";
+
+        try {
+            const response = await fetch(`/forecast?address=${encodeURIComponent(address)}`);
+            if (!response.ok) {
+                const data = await response.text();
+                throw new Error(`${data}`);
+            }
+            const data = await response.json();
+
+            const properties = data?.weatherForecast?.properties;
+            const periods = properties?.periods || [];
+
+            if (periods.length === 0) {
+                forecastDiv.textContent = "No forecast data available.";
+                return;
+            }
+
+            // Show formatted update time
+            if (properties.updateTime) {
+                const date = new Date(properties.updateTime);
+                const formatted = date.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                });
+                updateTimeDiv.textContent = "Forecast updated at: " + formatted;
+            }
+            locationNameDiv.textContent = "Location: " + (data.locationName || "Unknown");
+
+            // Show cache indicator and note if applicable
+            if (data.isFromCache) {
+                cacheIndicator.style.display = "block";
+                cacheNote.textContent = "*Forecast retrieved from cache.";
+            }
+
+            // Limit to first 3 periods
+            const limited = periods.slice(0, 3);
+
+            // Build forecast cards
+            const cardsHtml = limited.map(p => `
+          <div class="card">
+            <img src="${p.icon}" alt="${p.name}">
+            <h3>${p.name}</h3>
+            <p><strong>${p.temperature}°${p.temperatureUnit}</strong></p>
+            <p>${p.detailedForecast}</p>
+          </div>
+        `).join("");
+
+            forecastDiv.innerHTML = `<div class="forecast-cards">${cardsHtml}</div>`;
+
+        } catch (error) {
+            forecastDiv.textContent = `Failed to fetch forecast: ${error.message}`;
+        }
+    });
+</script>
+</body>
+</html>
