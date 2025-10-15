@@ -13,9 +13,9 @@ import org.springframework.cache.annotation.EnableCaching;
 @SpringBootApplication(scanBasePackages = "com.dierauf.apple.forecast")
 @EnableCaching // Allows for caching of weather forecasts based on zipcode. Using Caffeine as the cache provider.
 // Use minimum access level necessary. Package-private for now. Reduces surface area for attack.
-class ForecastApplication {
+public class ForecastApplication {
 
-    static void main(String[] args) {
+    public static void main(String[] args) {
         System.out.println("Welcome to the Apple Weather Forecast Application!");
         SpringApplication.run(ForecastApplication.class, args);
     }
