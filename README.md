@@ -35,4 +35,4 @@ mvn spring-boot:run
 
 Navigate your browser to: http://localhost:8080/
 
-![img.png](img.png)
+![Forecast Viewer.jpg](Forecast%20Viewer.jpg)
